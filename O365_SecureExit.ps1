@@ -72,8 +72,6 @@ $TableParser = [ordered] @{
     "" = ""
 }
 
-$script:O365URI = "https://outlook.office365.com/powershell-liveid"
-
 #ImportRelevant Module
 try {
     Import-Module AzureAD
@@ -85,24 +83,26 @@ catch {
 }
 
 function Connect-O365PS {
-    $O365Session = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri $($script:O365URI) -Credential $script:365GACreds -Authentication Basic -AllowRedirection
-    Import-Module (Import-Session $O365Session -AllowClobber) -Global
+    $O365Session = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri https://outlook.office365.com/powershell-liveid -Credential $script:365GACreds -Authentication Basic -AllowRedirection
+    Import-Module (Import-PSSession $O365Session -AllowClobber) -Global
 }
 
 #Connect to required Services
 try {
-    Connect-AzureAD -Credential $script:365GACreds
+    Connect-AzureAD -Credential $script:365GACreds | Out-Null
 }
 catch {
     Write-Error -Message "Unable to connect to AzureAD Service, please check your credentials are correct"
 }
 try {
-    Connect-O365PS
+    Connect-O365PS | Out-Null
 }
 catch {
     Write-Error -Message "Unable to connect to O365 PS Service, please check your credentials are correct"
 }
 
+
+#Gets all AzureADUsers, puts into list for Form to use
 $ActiveUsers = Get-AzureADUser -All $true
 
 foreach ($User in $ActiveUsers) {
@@ -110,7 +110,7 @@ foreach ($User in $ActiveUsers) {
 }
 
 $UserSelectionForm.Controls.Add($UsersListBox)
-$UserSelectionFormorm.TopMost = $true
+$UserSelectionForm.TopMost = $true
 $result = $UserSelectionForm.ShowDialog()
 
 if ($result -eq [System.Windows.Forms.DialogResult]::OK)
@@ -125,3 +125,9 @@ elseif ($result -eq [System.Windows.Forms.DialogResult]::Cancel) {
 
 #Get Full Account for User - $SeletedUser is only the UPN, as this string gets stripped when run through the form
 $SelectedUser = Get-AzureADUser -ObjectID $SelectedUser
+
+#Block Signin for User
+
+
+#Remove Mobile Devices from Exchange
+Remove-MobileDevice -ObjectID $SelectedUser.ObjectID 
